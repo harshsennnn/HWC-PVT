@@ -47,7 +47,7 @@ jobs:
       - name: Run Checkstyle
         id: checkstyle
         run: mvn checkstyle:check
-        continue-on-error: true
+        continue-on-error: false
 
       - name: Block Changes on Failure
         if: steps.checkstyle.outcome != 'success'
