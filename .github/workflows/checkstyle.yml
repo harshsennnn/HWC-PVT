@@ -5,6 +5,7 @@ on:
     branches: [ "*" ]
     paths: [ '**/*.java' ]
   pull_request:
+    types: [opened, synchronize, reopened]
     branches: [ "master", "develop" ]
     paths: [ '**/*.java' ]
 
@@ -31,17 +32,21 @@ jobs:
         id: checkstyle
         run: |
           mvn checkstyle:check
-          if [ $? -ne 0 ]; then
-            echo "Checkstyle violations found"
-            exit 1
+          EXIT_CODE=$?
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "::error::Checkstyle violations found"
+            exit $EXIT_CODE
           fi
           
-      - name: Status Check
-        if: always()
+      - name: Update PR Status
+        if: github.event_name == 'pull_request' && failure()
         uses: actions/github-script@v6
         with:
           script: |
-            if (context.job.status !== 'success') {
-              core.setFailed('Checkstyle violations found. Fix formatting issues before merging.')
-              process.exit(1)
-            }
+            github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.name,
+              pull_number: context.issue.number,
+              body: 'Checkstyle violations must be fixed before merging.',
+              event: 'REQUEST_CHANGES'
+            })
